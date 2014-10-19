@@ -1,0 +1,83 @@
+---
+title: "PA1_template.Rmd"
+author: "abdimoh"
+date: "Saturday, October 18, 2014"
+output: html_document
+---
+
+# Reproducible Reasearch: Peer Assessment 1
+
+## Loading and preprocessing the data
+
+Reading the file from the working directory
+```{r, echo=TRUE}
+activity<-read.csv("activity.csv", header=T)
+
+```
+
+Getting the total number of steps taken each day and then showing a histogram of the total number of steps each day.
+Also, the mean and median of the total number of steps each day is calculated
+
+
+```{r, echo=TRUE}
+Sys.setlocale() 
+#install.packages("plyr") # in case not yet installed
+library(plyr)
+ stepstotal <- ddply(activity, c("date"), summarise, total = sum(steps[!is.na(steps)]), mean = mean(steps, na.rm=TRUE) )
+hist(stepstotal$total, main="Histogram of total steps each day", xlab="Total steps each day")
+
+mean(stepstotal$total)
+median(stepstotal$total)
+```
+Making a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+
+Determining which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps
+```{r, echo=TRUE}
+aversteps <- ddply(activity, c("interval"), summarise,  mean = mean(steps, na.rm=TRUE) )
+plot(aversteps$interval, aversteps$mean, type="l")
+
+which.max(aversteps$mean)
+```
+Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NAs)
+```{r, echo=TRUE}
+sum(is.na(activity$steps))  # number of rows with NA
+```
+Using  strategy for filling in all of the missing values in the dataset. The mean for that 5-minute interval is used.
+And creating a new dataset that is equal to the original dataset but with the missing data filled in.
+```{r, echo=TRUE}
+# install.packages("dplyr")  # in case this package is not installed
+
+library("dplyr")
+
+# impactivity has missing data filled
+impactivity<-activity%>%group_by(interval)%>%mutate(steps = replace(steps, is.na(steps), mean(steps, na.rm=TRUE)))
+```
+Make a histogram of the total number of steps taken each day and Calculate and report the mean and median total number of steps taken per day. After filling the missing values,  the mean and the median are the same.
+```{r, echo=TRUE}
+impstepstotal<-ddply(impactivity, c("date"), summarise, total = sum(steps[!is.na(steps)]), mean = mean(steps, na.rm=TRUE) )
+hist(impstepstotal$total, main="Histogram of total number of steps taken each day", xlab="Total number of steps taken each day")
+
+ mean(impstepstotal$total)
+ median(impstepstotal$total)
+```
+Create a new factor variable in the dataset with two levels - "weekday" and "weekend" indicating whether a given date is a weekday or weekend day.
+```{r,echo=TRUE}
+# weekdays and weekend
+impactivity$daytype<-ifelse(!weekdays(as.Date(impactivity$date)) %in% c("Saturday", "Sunday"),"weekday","weekend")
+```
+
+Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis).
+
+```{r,echo=TRUE}
+wkdact<-impactivity[impactivity$daytype=='weekday',]
+wkdaversteps<-ddply(wkdact, c("interval"), summarise,  mean = mean(steps, na.rm=TRUE) )
+ 
+
+wkenddact<-impactivity[impactivity$daytype=='weekend',]
+wkendaversteps<-ddply(wkenddact, c("interval"), summarise,  mean = mean(steps, na.rm=TRUE) )
+par(mfrow=c(2,1))
+plot(wkdaversteps$interval, wkdaversteps$mean, main="Average number of steps on weekdays" , xlab="Interval",ylab="mean",type="l")
+plot(wkendaversteps$interval, wkendaversteps$mean, main="Average number of steps on weekend" , xlab="Interval",ylab="mean" ,type="l")
+```
+
+
